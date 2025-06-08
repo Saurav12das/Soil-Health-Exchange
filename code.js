@@ -1,5 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Map, Wind, BookOpen, Send, Search, Leaf, Users, ChevronDown, ChevronUp, ChevronsRight, FileText, Globe, Tractor, Scaling, Tag } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
+import {
+    Map,
+    Wind,
+    BookOpen,
+    Send,
+    Search,
+    Leaf,
+    Users,
+    ChevronDown,
+    ChevronUp,
+    ChevronsRight,
+    FileText,
+    Globe,
+    Tractor,
+    Scaling,
+    Tag
+} from 'https://cdn.jsdelivr.net/npm/lucide-react@latest/+esm';
 
 // Mock Data: In a real application, this would come from a database.
 const initialQuestions = [
@@ -698,4 +715,10 @@ const Footer = () => (
         </div>
     </footer>
 );
+
+const rootElement = document.getElementById('root');
+if (rootElement) {
+    const root = ReactDOM.createRoot(rootElement);
+    root.render(<App />);
+}
 
