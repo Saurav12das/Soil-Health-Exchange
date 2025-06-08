@@ -309,7 +309,18 @@ const SubmitQuestionPage = ({ onFormSubmit }) => {
     };
 
     const handleFileChange = (e) => {
-        setFormData(prev => ({ ...prev, files: [...e.target.files] }));
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const files = Array.from(e.target.files);
+        const validFiles = files.filter(f => f.size <= maxSize);
+        const hasInvalid = files.length !== validFiles.length;
+
+        setFormData(prev => ({ ...prev, files: validFiles }));
+
+        if (hasInvalid) {
+            setErrors(prev => ({ ...prev, files: 'Files must be 10MB or less.' }));
+        } else if (errors.files) {
+            setErrors(prev => ({ ...prev, files: null }));
+        }
     };
 
     const validateForm = () => {
@@ -383,7 +394,7 @@ const SubmitQuestionPage = ({ onFormSubmit }) => {
                     <input type="text" name="soilType" value={formData.soilType} onChange={handleChange} className={`w-full p-3 border ${errors.soilType ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500`} placeholder="e.g., 'Cecil sandy loam' or 'heavy clay'"/>
                 </FormRow>
 
-                 <FormRow label="Attach Files (Optional)">
+                 <FormRow label="Attach Files (Optional)" error={errors.files}>
                     <p className="text-gray-500 text-xs mb-2">Attach soil test results, photos of the issue, etc. (Max 10MB)</p>
                     <input type="file" name="files" onChange={handleFileChange} multiple className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-100 file:text-green-700 hover:file:bg-green-200"/>
                  </FormRow>
