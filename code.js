@@ -171,6 +171,7 @@ export default function App() {
                 {page === 'questionDetail' && <QuestionDetailPage question={selectedQuestion} navigate={navigate} />}
                 {page === 'map' && <ChallengeMapPage questions={questions} navigate={navigate} />}
                 {page === 'about' && <AboutPage />}
+                {page === 'resources' && <ResourceLibraryPage />}
             </main>
             <Footer />
         </div>
@@ -183,6 +184,7 @@ const Header = ({ navigate }) => {
     const navItems = [
         { name: 'Answer Hub', page: 'hub', icon: BookOpen },
         { name: 'Challenge Map', page: 'map', icon: Map },
+        { name: 'Resource Library', page: 'resources', icon: FileText },
         { name: 'Our Process', page: 'about', icon: Users },
     ];
     return (
@@ -735,6 +737,19 @@ const AboutPage = () => (
                  <li><strong>Conservation Specialist:</strong> Expertise in cover cropping, no-till systems, and water management.</li>
             </ul>
         </div>
+    </div>
+);
+
+const ResourceLibraryPage = () => (
+    <div className="max-w-4xl mx-auto bg-white p-8 sm:p-12 rounded-xl shadow-lg border border-gray-200">
+        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-800 mb-6">Resource Library</h2>
+        <p className="text-gray-700 mb-4">Helpful links to external programs and guides for building soil health.</p>
+        <ul className="list-disc list-inside space-y-2 text-green-700">
+            <li><a className="hover:underline" href="https://www.nrcs.usda.gov/resources/guides-and-instructions" target="_blank">USDA-NRCS Conservation Guides</a></li>
+            <li><a className="hover:underline" href="https://www.sare.org/resources/cover-crops/" target="_blank">SARE Cover Crop Resources</a></li>
+            <li><a className="hover:underline" href="https://extension.psu.edu/soil-health" target="_blank">Penn State Extension Soil Health</a></li>
+            <li><a className="hover:underline" href="https://extension.umn.edu/crop-production/soil-management-and-health" target="_blank">University of Minnesota Extension Soil Management</a></li>
+        </ul>
     </div>
 );
 
