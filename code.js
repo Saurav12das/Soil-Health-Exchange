@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
+import React, { useState, useEffect, useMemo, useRef } from 'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm';
 import ReactDOM from 'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm';
 import {
     Map,
@@ -15,8 +15,10 @@ import {
     Globe,
     Tractor,
     Scaling,
-    Tag
+  Tag
 } from 'https://cdn.jsdelivr.net/npm/lucide-react@latest/+esm';
+import L from 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/+esm';
+import 'https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/+esm';
 
 // Mock Data: In a real application, this would come from a database.
 const initialQuestions = [
@@ -590,19 +592,45 @@ const DetailItem = ({ icon: Icon, label, value }) => (
 
 
 const ChallengeMapPage = ({ questions, navigate }) => {
-    // Map dimensions
-    const mapWidth = 960;
-    const mapHeight = 600;
+    const mapRef = useRef(null);
+    const layerRef = useRef(null);
+    const [showHeatmap, setShowHeatmap] = useState(false);
 
-    // A simple projection logic to convert lon/lat to x/y for the SVG
-    // This is a simplified equirectangular projection
-    const project = (lat, lon) => {
-        const x = (lon + 180) * (mapWidth / 360);
-        const y = (90 - lat) * (mapHeight / 180);
-        return { x, y };
-    };
+    useEffect(() => {
+        if (!mapRef.current) {
+            const map = L.map('challenge-map').setView([39.82, -98.57], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            mapRef.current = map;
+        }
+    }, []);
 
-    const [hoveredPoint, setHoveredPoint] = useState(null);
+    useEffect(() => {
+        if (!mapRef.current) return;
+        if (layerRef.current) {
+            layerRef.current.remove();
+        }
+        if (showHeatmap) {
+            const points = questions.filter(q => q.coords).map(q => [q.coords.lat, q.coords.lon, 1]);
+            layerRef.current = L.heatLayer(points, { radius: 25 });
+        } else {
+            const group = L.layerGroup();
+            questions.forEach(q => {
+                if (!q.coords) return;
+                const marker = L.circleMarker([q.coords.lat, q.coords.lon], {
+                    radius: 6,
+                    fillColor: q.status === 'Answered' ? '#16a34a' : '#eab308',
+                    color: '#ffffff',
+                    weight: 1,
+                    fillOpacity: 1
+                }).on('click', () => navigate('questionDetail', q.id));
+                group.addLayer(marker);
+            });
+            layerRef.current = group;
+        }
+        layerRef.current.addTo(mapRef.current);
+    }, [showHeatmap, questions]);
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -611,61 +639,30 @@ const ChallengeMapPage = ({ questions, navigate }) => {
                 <p className="mt-4 text-lg text-gray-600">Visualize where challenges are emerging across the country.</p>
             </div>
             <div className="relative bg-white rounded-xl shadow-lg border border-gray-200 p-4">
-                <svg viewBox={`0 0 ${mapWidth} ${mapHeight}`} className="w-full h-auto bg-blue-100 rounded-lg">
-                    {/* Placeholder for a more detailed map background if needed */}
-                    <rect width={mapWidth} height={mapHeight} fill="#e0f2fe" />
-                    {/* This would be where you render SVG paths for states */}
-                    <text x={mapWidth / 2} y={30} textAnchor="middle" fontSize="16" fill="#0c4a6e">U.S. Map Area</text>
-                    
-                    {questions.map(q => {
-                        if (!q.coords) return null;
-                        const { x, y } = project(q.coords.lat, q.coords.lon);
-                        return (
-                            <g key={q.id} transform={`translate(${x},${y})`} 
-                                className="cursor-pointer"
-                                onClick={() => navigate('questionDetail', q.id)}
-                                onMouseEnter={() => setHoveredPoint(q)}
-                                onMouseLeave={() => setHoveredPoint(null)}
-                            >
-                                <circle 
-                                    r="10" 
-                                    fill={q.status === 'Answered' ? 'rgba(22, 163, 74, 0.7)' : 'rgba(234, 179, 8, 0.7)'} 
-                                    stroke="white" 
-                                    strokeWidth="1.5"
-                                    className="transition-transform duration-200"
-                                    style={{transform: hoveredPoint && hoveredPoint.id === q.id ? 'scale(1.5)' : 'scale(1)'}}
-                                />
-                                <circle 
-                                    r="4" 
-                                    fill={q.status === 'Answered' ? 'rgba(22, 163, 74, 1)' : 'rgba(234, 179, 8, 1)'} 
-                                />
-                            </g>
-                        );
-                    })}
-                </svg>
-                {hoveredPoint && (
-                    <div className="absolute bg-white p-3 rounded-lg shadow-xl border pointer-events-none transition-opacity"
-                        style={{ 
-                            left: `${project(hoveredPoint.coords.lat, hoveredPoint.coords.lon).x + 15}px`, 
-                            top: `${project(hoveredPoint.coords.lat, hoveredPoint.coords.lon).y}px`,
-                            maxWidth: '250px'
-                        }}>
-                        <p className="font-bold text-sm text-gray-800">{hoveredPoint.croppingSystem} in {hoveredPoint.region}</p>
-                        <p className="text-xs text-gray-600 mt-1 truncate">{hoveredPoint.question}</p>
-                         <p className={`mt-2 text-xs font-semibold ${hoveredPoint.status === 'Answered' ? 'text-green-600' : 'text-yellow-600'}`}>
-                            Status: {hoveredPoint.status}
-                        </p>
-                    </div>
-                )}
-            </div>
-            <div className="flex justify-center items-center gap-6 mt-6">
-                <div className="flex items-center">
-                    <div className="w-4 h-4 rounded-full bg-green-600 mr-2"></div>
-                    <span className="text-sm text-gray-600">Answered</span>
+                <div id="challenge-map" className="w-full h-96 rounded-lg"></div>
+                <div className="mt-4 flex justify-center">
+                    <button
+                        className={`px-4 py-2 border rounded-l ${!showHeatmap ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
+                        onClick={() => setShowHeatmap(false)}
+                    >
+                        Points
+                    </button>
+                    <button
+                        className={`px-4 py-2 border rounded-r ${showHeatmap ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
+                        onClick={() => setShowHeatmap(true)}
+                    >
+                        Heatmap
+                    </button>
                 </div>
-                <div className="flex items-center">
-                    <div className="w-4 h-4 rounded-full bg-yellow-500 mr-2"></div>
-                    <span className="text-sm text-gray-600">Pending Review</span>
+                <div className="flex justify-center items-center gap-6 mt-6">
+                    <div className="flex items-center">
+                        <div className="w-4 h-4 rounded-full bg-green-600 mr-2"></div>
+                        <span className="text-sm text-gray-600">Answered</span>
+                    </div>
+                    <div className="flex items-center">
+                        <div className="w-4 h-4 rounded-full bg-yellow-500 mr-2"></div>
+                        <span className="text-sm text-gray-600">Pending Review</span>
+                    </div>
                 </div>
             </div>
         </div>
