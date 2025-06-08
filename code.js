@@ -99,21 +99,55 @@ const stateCoordinates = {
 };
 const usStates = Object.keys(stateCoordinates);
 
+// Endpoint for Google Apps Script that stores submissions in Google Sheets
+// Replace the placeholder URL with your actual deployment URL
+const GOOGLE_SHEETS_ENDPOINT = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+
+// Submit form data to Google Sheets
+async function submitToGoogleSheets(formData) {
+    const payload = new FormData();
+    Object.entries(formData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+            payload.append(key, value.join(','));
+        } else {
+            payload.append(key, value);
+        }
+    });
+    const response = await fetch(GOOGLE_SHEETS_ENDPOINT, {
+        method: 'POST',
+        mode: 'cors',
+        body: payload
+    });
+    if (!response.ok) {
+        throw new Error('Failed to submit form');
+    }
+}
+
 // Main App Component
 export default function App() {
     const [page, setPage] = useState('home');
-    const [questions, setQuestions] = useState(initialQuestions);
+    const [questions, setQuestions] = useState(() => {
+        const stored = JSON.parse(localStorage.getItem('userQuestions') || '[]');
+        return [...stored, ...initialQuestions];
+    });
     const [selectedQuestionId, setSelectedQuestionId] = useState(null);
 
-    const handleAddQuestion = (newQuestionData) => {
+    const handleAddQuestion = async (newQuestionData) => {
         const newQuestion = {
-            id: questions.length + 1,
+            id: Date.now(),
             ...newQuestionData,
             status: "Pending",
             submittedAt: new Date(),
             answer: null,
             coords: stateCoordinates[newQuestionData.region] || { lat: 39.82, lon: -98.57 } // Default to US center
         };
+        try {
+            await submitToGoogleSheets(newQuestionData);
+            const stored = JSON.parse(localStorage.getItem('userQuestions') || '[]');
+            localStorage.setItem('userQuestions', JSON.stringify([newQuestion, ...stored]));
+        } catch (err) {
+            console.error('Error submitting question:', err);
+        }
         setQuestions(prev => [newQuestion, ...prev]);
         setPage('submissionSuccess');
     };
